@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<button>Do Something else</button>
+<script type="module">
+  import * as Comlink from "https://unpkg.com/comlink@4.3.0/dist/esm/comlink.js";
+  // import * as Comlink from "../../../../dist/esm/comlink.mjs";
+
+  Comlink.transferHandlers.set("exampleTransfer", {
+    canHandle(obj) {
+      return obj && !!obj.transferMePlease;
+    },
+    serialize(obj) {
+      return [obj.number, [],];
+    },
+    deserialize(obj) {
+      return {number: obj, transferMePlease: true};
+    },
+  });
+
+  class Service {
+    doSomething(number) {
+      console.debug("Did do Something with", {number});
+      return --number;
+    }
+  }
+
+  class Proxy {
+    constructor(service) {
+      this.service = service;
+    }
+
+    serviceDoSomething(obj) {
+      return {
+        transferMePlease: true,
+        number: this.service.doSomething(obj.number)
+      };
+    }
+  }
+
+  const remote = Comlink.wrap(Comlink.windowEndpoint(self.parent));
+  Comlink.expose(new Proxy(new Service()), self);
+
+  document.querySelector('button').addEventListener('click', async (ev) => {
+    console.debug('Click');
+    const newNumber = await remote.serviceDoSomethingElse({
+      transferMePlease: true,
+      number: 5
+    });
+    console.debug({newNumber});
+  });
+</script>
